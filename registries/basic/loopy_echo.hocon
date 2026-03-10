@@ -1,0 +1,70 @@
+{
+  include "registries/llm_config.hocon",
+
+    "metadata": {
+    "description": "An agent network that can be run in a loop to increment a counter on intervals.",
+    "tags": ["loopy", "example"], 
+    "sample_queries": [
+    "what is the counter?"
+    "hello"
+    "reset the counter"
+    ]
+  },
+
+  "tools": [
+    {
+      "name": "loopy_echo",
+      "function": {
+        "description": "A loopy agent that maintains a counter. On tick, it increments and echoes the counter. On user query, it reports the current counter.",
+      },
+      "instructions": """
+        Your name is `loopy_echo`.
+
+        You have one tool: counter_tool.
+
+        You maintain a persistent integer counter across turns.
+        IMPORTANT: do NOT rely on your own memory. Always call counter_tool.
+
+        Behavior:
+        - If the inquiry starts with "tick" (case-insensitive), call counter_tool with op="inc" and step=1.
+          Then respond with exactly: "tick <counter>".
+        - If the inquiry contains "counter" or "number" or asks "what" + "at" (roughly), call counter_tool with op="get".
+          Then respond with: "counter is <counter>".
+        - If the inquiry contains "reset", call counter_tool with op="reset" and respond "counter reset".
+        - Otherwise, call counter_tool with op="get" and respond: "<counter>: <echo of inquiry>".
+      """,
+        "allow": {
+          "to_upstream": {
+              # Specifying this allows sly_data keys
+              # from this network to be passed back
+              # to the calling client
+              "sly_data": ["loopy_echo_counter"]
+            }
+            "from_upstream": {
+                # Specifying this allows specific sly_data
+                # keys to be ingested from downstream agent
+                # networks as sly_data for this agent network
+                "sly_data": ["loopy_echo_counter"]
+            }
+        }
+
+      "tools": ["counter_tool"]
+    },
+        {   
+      "name": "counter_tool",
+            "function": {
+        "description": "get|inc|reset the persistent loopy_echo counter.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "op": {"type": "string", "description": "inc|get|reset"},
+                      "step": {"type": "string", "description": "Increment step when op=inc default 20"}
+                    },
+                    "required": ["op"]
+                }
+            },
+            "class": "loopy_echo.counter_tool.CounterTool"
+        },
+
+  ]
+}

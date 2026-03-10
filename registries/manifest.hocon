@@ -1,0 +1,4 @@
+{
+    # Basic examples
+    include "registries/basic/manifest.hocon",
+}

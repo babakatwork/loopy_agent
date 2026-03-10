@@ -1,0 +1,8 @@
+{
+  # Keep it minimal: two networks.
+  # - loopy_demo: top agent + loopy_control coded tool
+  # - loopy_echo: the loopy target agent (counter + echo)
+  "basic/loopy_manager.hocon": true,
+  "basic/loopy_echo.hocon": true,
+  "basic/hello_world.hocon": true,
+}

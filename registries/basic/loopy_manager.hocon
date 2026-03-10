@@ -1,0 +1,57 @@
+{
+  include "registries/llm_config.hocon",
+
+  "metadata": {
+    "description": "An agent network that can start, stop and communicate with agents that run permanantly in a loop.",
+    "tags": ["loopy", "continuous"], 
+    "sample_queries": [
+    "start demo basic/loopy_echo 2 tick"
+    "send demo what is the counter?"
+    "send demo hello"
+    "send demo reset the counter"
+    "send demo what is the counter?"
+    "stop demo"
+    ]
+  },
+
+  "tools": [
+    {
+      "name": "loopy_manager",
+      "function": {
+        "description": "Top agent. Controls a background loopy agent runner and can message it on demand.",
+      },
+      "instructions": """
+        Your name is `loopy_manager`.
+        Use your loopy_control tool for three actions:
+        - start: create a runner_id for an agent_name with interval_s and tick_prompt
+        - send: send an interactive message to a runner_id and get its response
+        - stop: stop a runner_id
+        If the user doesn't specify a runner_id, use runner_id = "demo".
+        If the user doesn't specify agent_name, use agent_name = "loopy_echo".
+        If the user doesn't specify interval, use 30 seconds.
+      """,
+      "tools": ["loopy_control"]
+    },
+        {   
+      "name": "loopy_control",
+            "function": {
+        "description": "Control a loopy agent runner (start|send|stop).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                "action": {"type": "string", "description": "start|send|stop"},
+                "runner_id": {"type": "string"},
+                "agent_name": {"type": "string", "description": "Required for start"},
+                "interval_s": {"type": "string", "description": "Required for start"},
+                "tick_prompt": {"type": "string", "description": "Optional for start"},
+                "message": {"type": "string", "description": "Required for send"},
+                "ns_host": {"type": "string", "description": "Optional: NeuroSAN server host (default localhost)"},
+                "ns_port": {"type": "string", "description": "Optional: NeuroSAN gRPC port (default 30011)"}
+                    },
+                    "required": ["action", "runner_id"]
+                }
+            },
+      	    "class": "loopy.control_tool.LoopyControlTool"
+        },
+  ]
+}
