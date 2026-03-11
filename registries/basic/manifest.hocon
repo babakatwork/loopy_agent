@@ -4,5 +4,4 @@
   # - loopy_echo: the loopy target agent (counter + echo)
   "basic/loopy_manager.hocon": true,
   "basic/loopy_echo.hocon": true,
-  "basic/hello_world.hocon": true,
 }

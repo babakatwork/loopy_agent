@@ -21,13 +21,13 @@
         "description": "Top agent. Controls a background loopy agent runner and can message it on demand.",
       },
       "instructions": """
-        Your name is `loopy_manager`.
-        Use your loopy_control tool for three actions:
-        - start: create a runner_id for an agent_name with interval_s and tick_prompt
+        Use your loopy_control tool for four actions:
+        - start: create a runner_id for an agent_name with optional interval_s, tick_prompt, trigger_method, and trigger_args
         - send: send an interactive message to a runner_id and get its response
+        - signal: send an event to a runner_id; the runner will evaluate trigger_method and only run if it fires
         - stop: stop a runner_id
         If the user doesn't specify a runner_id, use runner_id = "demo".
-        If the user doesn't specify agent_name, use agent_name = "loopy_echo".
+        If the user doesn't specify agent_name, use agent_name = "basic/loopy_echo".
         If the user doesn't specify interval, use 30 seconds.
       """,
       "tools": ["loopy_control"]
@@ -35,7 +35,7 @@
         {   
       "name": "loopy_control",
             "function": {
-        "description": "Control a loopy agent runner (start|send|stop).",
+        "description": "Control a loopy agent runner (start|send|stop|signal).",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -47,6 +47,10 @@
                 "message": {"type": "string", "description": "Required for send"},
                 "ns_host": {"type": "string", "description": "Optional: NeuroSAN server host (default localhost)"},
                 "ns_port": {"type": "string", "description": "Optional: NeuroSAN gRPC port (default 30011)"}
+                "trigger_method": {"type": "string", "description": "Optional Python dotted path for trigger function"},
+                "trigger_args": {"type": "string", "description": "Optional arguments for trigger_method"},
+                "event": {"type": "string", "description": "Required for signal: arbitrary event payload"},
+                "signal_sly_data": {"type": "string", "description": "Optional sly_data to merge for signal evaluation"},                
                     },
                     "required": ["action", "runner_id"]
                 }

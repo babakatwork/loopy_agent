@@ -46,13 +46,26 @@ def _as_float(value, default: float) -> float:
         return default
     return float(s)
 
+def _as_dict(value) -> Dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        s = value.strip()
+        if s == "":
+            return {}
+        import json
+        return json.loads(s)
+    raise ValueError(f"Expected dict or JSON string, got: {type(value)}")
+
 
 class LoopyControlTool(CodedTool):
     async def async_invoke(self, args: Dict[str, Any], sly_data: Dict[str, Any]) -> Any:
         print("[LoopyControlTool] ENTER async_invoke args=", args, "sly_data_keys=", list((sly_data or {}).keys()), flush=True)
         action = args.get("action")
 
-        if action not in {"start", "send", "stop"}:
+        if action not in {"start", "send", "stop", "signal"}:
             return {"ok": False, "error": f"Unknown action: {action}"}
 
         if action == "start":
@@ -79,11 +92,13 @@ class LoopyControlTool(CodedTool):
                     payload = {
                         "runner_id": args["runner_id"],
                         "agent_name": args["agent_name"],
-                        "interval_s": _as_float(args.get("interval_s"), 5.0),
+                        "interval_s": None if args.get("interval_s") in (None, "", "none", "null") else _as_float(args.get("interval_s"), 5.0),
                         "tick_prompt": args.get("tick_prompt", "tick"),
                         # optional override: where the NeuroSAN server is
                         "host": args.get("ns_host", "localhost"),
                         "port": _as_int(args.get("ns_port"), 30011),
+                        "trigger_method": args.get("trigger_method"),
+                        "trigger_args": _as_dict(args.get("trigger_args")),
                     }
 
                     logger.info(
@@ -117,6 +132,27 @@ class LoopyControlTool(CodedTool):
                     r.raise_for_status()
                     return {"ok": True, "response": r.json().get("response", "")}
 
+                if action == "signal":
+                    payload = {
+                        "runner_id": args["runner_id"],
+                        "event": _as_dict(args.get("event")),
+                        "sly_data": _as_dict(args.get("signal_sly_data")),
+                    }
+                    logger.info("LoopyControlTool signal runner_id=%s event=%s", runner_id, payload["event"])
+                    r = await client.post(f"{base_url}/signal", json=payload)
+                    logger.info("LoopRunner /signal status=%s runner_id=%s", r.status_code, runner_id)
+
+                    if r.status_code == 404:
+                        return {"ok": False, "error": r.json().get("detail", "unknown runner_id")}
+                    r.raise_for_status()
+                    body = r.json()
+                    return {
+                        "ok": True,
+                        "triggered": body.get("triggered", False),
+                        "prompt": body.get("prompt"),
+                        "response": body.get("response"),
+                    }
+
                 if action == "stop":
                     logger.info("LoopyControlTool stop runner_id=%s", runner_id)
                     r = await client.post(f"{base_url}/stop", json={"runner_id": args["runner_id"]})
@@ -135,4 +171,4 @@ class LoopyControlTool(CodedTool):
             logger.exception("LoopyControlTool unexpected error action=%s runner_id=%s", action, runner_id)
             return {"ok": False, "error": "Unexpected error in LoopyControlTool"}
 
-        return {"ok": False, "error": f"unknown action: {action}. expected one of start|send|stop"}
+        return {"ok": False, "error": f"unknown action: {action}. expected one of start|send|stop|signal"}

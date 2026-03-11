@@ -43,5 +43,5 @@ class CounterTool(CodedTool):
             return {"counter": 0, "op": "reset"}
 
         # default: get
-        print("============counter_tool, key=" + str(sly_data[self.KEY]))
+        print("============counter_tool, key=" + str(current))
         return {"counter": current, "op": "get"}
